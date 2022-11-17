@@ -1,0 +1,53 @@
+/* 全局样式表 */
+body, html, #app {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior-y: contain;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  font-family: 'Microsoft YaHei', 'Sans-serif';
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+}
+
+.el-color-picker__panel {
+  padding: 16px;
+  border-radius: 16px;
+  background-color: rgba(255, 255, 255);
+  border: #fff5;
+
+  .el-input__inner {
+    background-color: #fff9;
+    border-radius: 12px;
+  }
+
+  .el-button {
+    color: #fff;
+  }
+
+  .el-button:last-child {
+    border-radius: 16px;
+    color: #FFF;
+    background-color: #409EFF;
+    border-color: #409EFF;
+  }
+}
+
+.el-slider__button{
+  border: 2px solid #111;
+}
+.el-slider__bar {
+  background-color: #666;
+}
+.el-slider__runway {
+  background-color: #fff;
+}
