@@ -1,7 +1,13 @@
 <template>
   <div class="boardTab">
     <p class="panelTitle" v-text="boardTitle"></p>
-    <div class="bulletinBoard">
+    <div class="userlistContainer bulletinBoard" v-if="ingameData && ingameData.userlist">
+      <div class="user" v-for="user in ingameData.userlist" :key="user.username">
+        <div class="username" v-text="user.username"></div>
+        <div class="score" v-text="user.score"></div>
+      </div>
+    </div>
+    <div class="bulletinBoard" v-else>
 
     </div>
     <p class="panelTitle" v-text="roomTitle"></p>
@@ -19,6 +25,7 @@ export default {
     boardTitle: String,
     roomTitle: String,
     syncFlag: Boolean,
+    ingameData: Object,
   },
   data() {
     return {

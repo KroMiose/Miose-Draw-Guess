@@ -21,6 +21,8 @@ CORS(app, supports_credentials=True)
 
 from accountOpt import accountOpt
 ao = accountOpt()
+from dataOpt import dataOpt
+do = dataOpt()
 
 # 测试服务器连通性接口
 @app.route('/ping', methods=['GET', 'POST'])
@@ -74,6 +76,15 @@ def logout():
     session['userid'] = False
     session['username'] = False
     return {'code': 'success'}
+
+""" ================================ 游戏服务接口 ================================ """
+# 获取随机词语接口 & 需登录
+@app.route('/get_word', methods=['GET'])
+def get_word():
+    if 'userid' in session and session['userid']:
+        words = do.get_random_word(config.game_configs['word_pool_size'])
+        return {'code': 'success', 'msg': '获取成功', 'data': words}
+    return {'code': 'error', 'msg': '请先登录'}
 
 
 """ ================================ 房间管理接口 ================================ """
@@ -158,7 +169,6 @@ def join_room():
                     }}
     return {'code': 'error'}
 
-
 # 获取WebSocket url接口
 @app.route('/get_public_chat_room_ws')
 def get_public_chat_room_ws():
@@ -168,7 +178,6 @@ client_list = []
 # 公共聊天室ws接口
 @app.route('/public_chat_room')
 def public_chat_room():
-    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 客户端 {client_socket} 尝试连接")
     client_socket = request.environ.get('wsgi.websocket')
     client_list.append(client_socket)
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 客户端 {client_socket} 已连接")
@@ -188,8 +197,9 @@ def public_chat_room():
         client_list.remove(client_socket)
         return {'code': 'error'}
 
+
 if __name__ == '__main__':
-    os.system('cls')
+    # os.system('cls')
     app.config['SECRET_KEY'] = os.urandom(32)
     # app.run(debug=config.debug, threaded=True, host='0.0.0.0', port=config.server_port)
     http_server = WSGIServer(('0.0.0.0', config.server_port), application=app, handler_class=WebSocketHandler)

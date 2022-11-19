@@ -3,7 +3,7 @@
     <viewHeader :panelTitle="'游戏房间'"></viewHeader>
     <div class="viewContainer">
       <div class="viewBody">
-        <boardTab :wsUrl="wsUrl" :boardTitle="'玩家列表'" :roomTitle="'聊天栏'" ref="boardTab" :syncFlag="syncFlag" class="boardTab" v-on:wsOnRecv="wsOnRecv"></boardTab>
+        <boardTab :wsUrl="wsUrl" :boardTitle="'玩家列表'" :ingameData="ingameData" :roomTitle="'聊天栏'" ref="boardTab" :syncFlag="syncFlag" class="boardTab" v-on:wsOnRecv="wsOnRecv"></boardTab>
         
         <div id="palette">
           <canvas id="canvas"
@@ -38,9 +38,19 @@
       </div>
       <viewFoot></viewFoot>
       <div class="msgBoarderBox">
-        测试字体
+        {{showText}}
         <div class="optBtn">
           <el-button @click="req_startGame()">开始游戏</el-button>
+        </div>
+      </div>
+      <div :class="['wordSelectorBox', wordSelecting? 'wsb-show': 'wsb-hide']">
+        <div class="wordSelector">
+          <div class="wordSelectorTitle">请选择一个词语</div>
+          <div class="wordSelectorBody">
+            <div class="wordSelectorItem" v-for="item in wordList" :key="item.word" @click="req_selectWord(item)">
+              <div class="wordSelectorItemText" v-text="item.word"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -96,6 +106,10 @@ export default {
         // '#c71585',
       ],
       syncFlag: false,
+      showText: '等待中...',
+      wordSelecting: false,
+      wordList: [],
+      ingameData: {},
     }
   },
   watch: {
@@ -115,21 +129,80 @@ export default {
     },
     //  执行开始游戏
     run_startGame() {
-      this.resetCanvas()  // 重置画板
       this.enableCanvasOpt = false  // 禁止画板操作
       this.$message({
-        message: '游戏开始',
+        message: '游戏即将开始',
         type: 'success'
       });
+
+      setTimeout(() => {
+        if(this.ingameData.hostname == this.getUsername) {
+          this.sendWsMsg({type: 'opt', commend: 'startRound'})
+        }
+      }, 1000);
     },
     // 执行选词流程
     run_selectWord() {
-      
+      this.$http({
+        method: 'get',
+        url: '/api/get_word',
+      })
+        .then(res => {
+          this.wordList = res.data.data
+          this.wordSelecting = true
+          this.$message({
+            message: '现在是你的回合，请选择一个词语开始绘画',
+            type: 'success'
+          });
+        })
     },
 
     // 提交选词
-    req_selectWord() {
-      // this.sendWsMsg({type: 'opt', commend: 'selectWord'})
+    req_selectWord(word) {
+      this.wordSelecting = false
+      this.sendWsMsg({type: 'opt', commend: 'selectWord', word: word})
+    },
+
+    // 开始绘画
+    run_startRound() {
+      this.resetCanvas()  // 重置画板
+
+      // 主持人设置回合结束计时器
+      if(this.ingameData.hostname === this.getUsername) {
+        this.roundTimer = setTimeout(() => {
+          this.sendWsMsg({type: 'opt', commend: 'endRound'})
+        }, 60000);
+      }
+
+      if(this.ingameData.curDrawer === this.getUsername) {
+        this.enableCanvasOpt = true
+        this.$message({
+          message: '现在是你的回合，请开始绘画',
+          type: 'success'
+        });
+      } else {
+        this.$message({
+          message: '现在是' + this.ingameData.curDrawer + '的回合，请等待',
+          type: 'success'
+        });
+      }
+    },
+
+    // 结束绘画
+    run_endRound() {
+      this.enableCanvasOpt = false
+      this.$message({
+        message: '回合结束',
+        type: 'success'
+      });
+      if(this.ingameData.hostname == this.getUsername) {
+        if(this.roundTimer) {
+          clearTimeout(this.roundTimer)
+        }
+        setTimeout(() => {
+          this.sendWsMsg({type: 'opt', commend: 'startRound'})
+        }, 10000);
+      }
     },
     
     // 接收到ws信息
@@ -157,8 +230,18 @@ export default {
       } else if (data.type == "opt") {
         switch (data.runMethod) {
           case 'run_startGame': _this.run_startGame(); break;
+          case 'run_selectWord': _this.run_selectWord(); break;
+          case 'run_startRound': _this.run_startRound(); break;
+          case 'run_endRound': _this.run_endRound(); break;
         
           default: break;
+        }
+
+        if(data.showText) {
+          this.showText = data.showText
+        }
+        if(data.ingameData) {
+          this.ingameData = data.ingameData
         }
       }
     },
@@ -169,7 +252,7 @@ export default {
       let timestamp = (new Date()).valueOf()
       data.sender = this.getUsername
       data.timestamp = timestamp
-      this.$refs.boardTab.submitPath(data)
+      this.$refs.boardTab.submitPath(JSON.stringify(data))
     },
     // 绘画步骤完成触发
     drawStep(opt) {
@@ -564,6 +647,58 @@ export default {
   color: #ffcfbb;
   font-size: 22px;
   border: 4px solid #FDB99B88;
+}
+
+.wordSelectorBox {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  margin-left: -20vw;
+  margin-top: -25vh;
+  width: 40vw;
+  height: 30vh;
+  border-radius: 16px;
+  background-color: #fffa;
+  color: #444;
+  font-size: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 10px 0;
+  transition: all 0.3s;
+  border: 1px solid #ffcfbb;
+  box-shadow: #0003 4px 4px 16px;
+
+  .wordSelector {
+    flex: 1;
+    width: 100%;
+    overflow: auto;
+    padding: 0 10px;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
+    flex-wrap: wrap;
+
+    .wordItem {
+      border: 1px solid #ffcfbb;
+      padding: 4px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      border-radius: 8px;
+      background-color: #fff8;
+      margin: 5px;
+      cursor: pointer;
+    }
+  }
+}
+.wsb-hide {
+  top: -100vh;
+}
+.wsb-show {
+  top: 50%;
 }
 
 </style>

@@ -125,11 +125,11 @@ export default {
       }
 
       this.ws.onclose = function (e) {
-        console.log('websocket 断开');
-        console.log(e)
+        // console.log('websocket 断开');
+        // console.log(e)
         console.log(e.code + ' ' + e.reason + ' ' + e.wasClean);
         _this.$message({type: 'error', message: 'WebSocket断开', duration: 1000})
-        setTimeout(() => {_this.connectToChatRoom(wsUrl)}, 5000)
+        // setTimeout(() => {_this.connectToChatRoom(wsUrl)}, 5000)
       }
 
       this.ws.onerror = function (MessageEvent) {
