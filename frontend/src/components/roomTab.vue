@@ -27,7 +27,7 @@
               <span :class="['player-num', item.cur_players_num==item.max_players_num?'player-num-full':'']">{{item.cur_players_num + '/' + item.max_players_num}}</span>
             </p>
             <p class="room-hostname">
-              <el-button v-show="item.status == 'waiting'" type="success" size="mini" @click="joinRoom(item.id)">进入房间</el-button>
+              <el-button v-show="item.status == 'waiting'" type="success" size="mini" @click="joinRoom(item.id, item.locked != 'False')">进入房间</el-button>
               <el-button v-show="item.status != 'waiting'" type="warning" size="mini" disabled>游戏中</el-button>
             </p>
           </div>
@@ -40,11 +40,11 @@
       :visible.sync="dialogVisible"
       width="400px">
       <div class="row">
-        <span>房间名:</span>
+        <div class="span">房间名:</div>
         <el-input v-model="hostRoomInfo.name" placeholder="给房间起个好听的名字吧~"></el-input>
       </div>
       <div class="row">
-        <span>房间描述:</span>
+        <div class="span">启用词库:</div>
         <el-select v-model="hostRoomInfo.word_sources" multiple placeholder="请选择词库源">
           <el-option
             v-for="item in word_sources" :key="item" :label="item" :value="item"
@@ -54,11 +54,11 @@
         <!-- <el-input v-model="hostRoomInfo.description" placeholder="简单描述一下吧~"></el-input> -->
       </div>
       <div class="row">
-        <span>访问密码:</span>
+        <div class="span">访问密码:</div>
         <el-input type="password" v-model="hostRoomInfo.password" placeholder="留空即为公开房间"></el-input>
       </div>
       <div class="row">
-        <span>最大玩家数:</span>
+        <div class="span">最大玩家数:</div>
         <div class="number-input">
           <i class="el-icon-remove-outline icn" @click="changePlayerNum(-1)"></i>
           <el-input type="number" v-model="hostRoomInfo.max_players_num"></el-input>
@@ -83,6 +83,13 @@ export default {
     this.$http.get('/api/get_word_source_list').then(res => {
       this.word_sources = res.data.data
     })
+    // 设置定时器，每隔一段时间刷新一次房间列表
+    this.reloadRoomTimer = setInterval(() => {
+      this.reloadRooms()
+    }, 5000)
+  },
+  beforeUnmount() {
+    clearInterval(this.reloadRoomTimer)
   },
   data() {
     return {
@@ -134,6 +141,8 @@ export default {
           if(res.data.code == 'success') {
             _this.$store.commit('setCurRoom', res.data.roomInfo)
             _this.$router.push('/room')
+          } else {
+
           }
         })
     },
@@ -146,34 +155,87 @@ export default {
         data: {},
       })
         .then((res) => {
-          console.log(res.data)
           if(res.data.code == 'success') {
             _this.roomList = res.data.rooms
+          } else {
+            _this.$message({
+              type: 'error',
+              message: '登录状态验证失败，请重新登录',
+              duration: 2000,
+            })
+            _this.$router.push('/login')
           }
         })
         .catch((err) => {
-          console.log(err)
+
         })
     },
     // 加入房间
-    joinRoom(roomId) {
+    joinRoom(roomId, locked) {
       let _this = this
-      this.$http({
-        method: 'POST',
-        url: '/api/join_room',
-        data: {roomId: roomId, password: ''},
-      })
-        .then((res) => {
-          console.log(res.data)
-          if(res.data.code == 'success') {
-            _this.$store.commit('setCurRoom', res.data.roomInfo)
-            _this.$router.push('/room')
-          }
+      if(locked) {
+        // 房间上锁需要密码
+        this.$prompt('请输入房间密码', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          inputPattern: /^\S{1,}$/,
+          inputErrorMessage: '密码不能为空',
+        }).then(({ value }) => {
+          _this.$http({
+            method: 'POST',
+            url: '/api/join_room',
+            data: {
+              roomId: roomId,
+              password: value,
+            },
+          })
+            .then((res) => {
+              console.log(res.data)
+              if(res.data.code == 'success') {
+                _this.$store.commit('setCurRoom', res.data.roomInfo)
+                _this.$router.push('/room')
+              } else {
+                _this.$message({type: 'error', message: res.data.msg, duration: 1000})
+              }
+            })
+        }).catch(() => {
+          _this.$message({
+            type: 'info',
+            message: '取消输入',
+          });
+        });
+
+      } else {
+        this.$http({
+          method: 'POST',
+          url: '/api/join_room',
+          data: {roomId: roomId, password: ''},
         })
-        .catch((err) => {
-          console.log(err)
-        })
-      console.log(roomId)
+          .then((res) => {
+            console.log(res.data)
+            if(res.data.code == 'success') {
+              _this.$store.commit('setCurRoom', res.data.roomInfo)
+              _this.$router.push('/room')
+            } else {
+              _this.$message({
+                type: 'error',
+                message: '登录状态验证失败，请重新登录',
+                duration: 2000,
+              })
+              _this.$router.push('/login')
+            }
+          })
+          .catch((err) => {
+            console.log(err)
+            _this.$message({
+              type: 'error',
+              message: '登录状态验证失败，请重新登录',
+              duration: 2000,
+            })
+            _this.$router.push('/login')
+          })
+        console.log(roomId)
+      }
     },
   }
 }
@@ -343,12 +405,12 @@ export default {
     text-shadow: 2px 2px 12px #000c;
     margin-bottom: 15px;
 
-    span {
+    .span {
       flex: 0.27;
       color: #fff;
     }
 
-    .el-input{
+    .el-input, .el-select{
       flex: 0.75;
       color: #fff;
 

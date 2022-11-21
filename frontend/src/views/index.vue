@@ -1,6 +1,6 @@
 <template>
   <div class="container" v-loading="loading" element-loading-background="#8888">
-    <viewHeader :panelTitle="'游戏大厅'"></viewHeader>
+    <viewHeader :panelTitle="'返回登录'" @titleClick="exitPubRoom()"></viewHeader>
     <div class="viewContainer">
       <div class="viewBody">
         <roomTab class="roomTab"></roomTab>
@@ -31,6 +31,11 @@ export default {
       loading: true,
     }
   },
+  methods: {
+    exitPubRoom() {
+      this.$router.push('/login')
+    }
+  }
 }
 </script>
 

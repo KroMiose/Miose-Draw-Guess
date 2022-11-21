@@ -1,9 +1,9 @@
 <template>
   <div class="container" v-loading="loading" element-loading-background="#8888">
-    <viewHeader :panelTitle="'游戏房间'"></viewHeader>
+    <viewHeader :panelTitle="'返回大厅'" @titleClick="exitRoom()"></viewHeader>
     <div class="viewContainer">
       <div class="viewBody">
-        <boardTab :wsUrl="wsUrl" :boardTitle="'玩家列表'" :ingameData="ingameData" :roomTitle="'聊天栏'" ref="boardTab" :syncFlag="syncFlag" class="boardTab" v-on:wsOnRecv="wsOnRecv"></boardTab>
+        <boardTab :boardTitle="'玩家列表'" :ingameData="ingameData" :roomTitle="'聊天栏'" ref="boardTab" :syncFlag="syncFlag" class="boardTab" v-on:wsOnRecv="wsOnRecv"></boardTab>
         
         <div id="palette">
           <canvas id="canvas"
@@ -57,6 +57,7 @@
     <!-- 音效资源库 -->
     <div class="audiosrc" style="display:none">
       <audio id="got-answer" src="/audios/got_answer.mp3"></audio>
+      <audio id="start-draw" src="/audios/start_draw.wav"></audio>
     </div>
   </div>
 </template>
@@ -110,7 +111,7 @@ export default {
   data() {
     return {
       loading: true,
-      wsUrl: 'ws://192.168.0.108:2910/draw_room',
+      // wsUrl: 'ws://192.168.0.108:2910/draw_room',
 
       enableCanvasOpt: true,
       painting: false,
@@ -186,12 +187,16 @@ export default {
         }
       })
         .then(res => {
+          // 播放音效
+          let audio = document.getElementById('start-draw')
+          audio.volume = 0.8
+          audio.play()
           this.wordList = res.data.data
           this.wordSelecting = true
-          this.$message({
-            message: '现在是你的回合，请选择一个词语开始绘画',
-            type: 'success'
-          });
+          // this.$message({
+          //   message: '现在是你的回合，请选择一个词语开始绘画',
+          //   type: 'success'
+          // });
           this.selectWordTimer = setTimeout(() => { // 超时选择随机词
             this.req_selectWord(this.wordList[Math.floor(Math.random() * this.wordList.length)])
           }, this.ingameData.selection_duration * 1000);
@@ -266,10 +271,20 @@ export default {
       audio.volume = 0.5
       audio.play()
     },
+
+    // 主持人离线
+    run_hostOffline() {
+      this.$message({
+        message: '主持人已离线，游戏结束',
+        type: 'error',
+        duration: 1500,
+      })
+      this.exitRoom()
+    },
     
     // 接收到ws信息
     wsOnRecv(data) {
-      console.log('接收到ws信息', data)
+      // console.log('接收到ws信息', data)
       let _this = this
       if(data.type === 'path') {  // 处理绘图路径
         if(data.sender !== this.getUsername) {
@@ -296,6 +311,7 @@ export default {
           case 'run_startRound': _this.run_startRound(); break;
           case 'run_endRound': _this.run_endRound(); break;
           case 'run_updateScore': _this.run_updateScore(); break;
+          case 'run_hostOffline': _this.run_hostOffline(); break;
         
           default: break;
         }
@@ -304,6 +320,9 @@ export default {
         this.showText = data.showText
       }
       if(data.ingameData) {
+        data.ingameData.userlist.sort((x1, x2) => {
+          return x2.score - x1.score
+        })
         this.ingameData = data.ingameData
       }
       if(data.deadtimestamp) {
@@ -312,6 +331,20 @@ export default {
       if(data.setStatus) {
         this.gamestatus = data.setStatus
       }
+      let is_host_online = false
+      data.ingameData.userlist.forEach((user) => {
+        if(user.username === data.ingameData.hostname) {
+          is_host_online = true
+        }
+      })
+      if(!is_host_online) {
+        this.run_hostOffline()
+      }
+    },
+    // 离开房间
+    exitRoom() {
+      this.sendWsMsg({type: 'opt', commend: 'exitRoom'})
+      this.$router.push('/')
     },
     // 发送消息
     sendWsMsg(data) {
@@ -494,12 +527,14 @@ export default {
     },
     // 绘制路径
     drawPathRaw(w, c, lineList) {
+      let strokeStyleTmp = this.ctx.strokeStyle
       this.ctx.lineWidth = w
       this.ctx.strokeStyle = c
       let _this = this
       lineList.forEach(function (line){
         _this.drawLineRaw(line.x1, line.y1, line.x2, line.y2)
       })
+      this.ctx.strokeStyle = strokeStyleTmp
     },
     // 绘制线条(绝对)
     drawLineRaw(x1, y1, x2, y2) {

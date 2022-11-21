@@ -41,7 +41,7 @@ export default {
   },
   mounted() {
     let _this = this
-    console.log('chatBoard mounted')
+    // console.log('chatBoard mounted')
     if(this.ws) { // 关闭原有ws连接
       this.ws.close()
     }
@@ -59,7 +59,7 @@ export default {
           }
         })
         .catch((err) => {
-          console.log(err)
+          // console.log(err)
           _this.$message({type: 'error', message: '获取WebSocket链接失败', duration: 2000})
         })
 
@@ -75,7 +75,7 @@ export default {
   },
   beforeUnmount() {
     if(this.ws) {
-      console.log('关闭原有ws连接')
+      // console.log('关闭原有ws连接')
       this.ws.close()
     }
   },
@@ -93,7 +93,7 @@ export default {
       // }
       if(data) {
         if(this.ws && this.ws.readyState == 1){
-          console.log(this.ws)
+          // console.log(this.ws)
           this.ws.send(data)
         }
       }
@@ -101,10 +101,10 @@ export default {
     connectToChatRoom(wsUrl) {
       let _this = this
       this.ws = new WebSocket(wsUrl);
-      console.log('正在连接', wsUrl)
+      // console.log('正在连接', wsUrl)
 
       this.ws.onopen = function (MessageEvent) {
-        console.log('ws连接成功')
+        // console.log('ws连接成功')
         if (_this.$route.name === 'room') {
           let timestamp = (new Date()).valueOf();
           let sendData = {
@@ -122,7 +122,7 @@ export default {
         // console.log(MessageEvent.data)
         let data = JSON.parse(MessageEvent.data)
         if(data.type === "chat") {
-          console.log(data)
+          // console.log(data)
           _this.recv_data.push(JSON.parse(MessageEvent.data))
           setTimeout(() => {
             _this.scrollDown()
@@ -132,16 +132,14 @@ export default {
       }
 
       this.ws.onclose = function (e) {
-        // console.log('websocket 断开');
-        // console.log(e)
-        console.log(e.code + ' ' + e.reason + ' ' + e.wasClean);
-        _this.$message({type: 'error', message: 'WebSocket断开', duration: 1000})
+        // console.log(e.code + ' ' + e.reason + ' ' + e.wasClean);
+        // _this.$message({type: 'error', message: 'WebSocket断开', duration: 1000})
         // setTimeout(() => {_this.connectToChatRoom(wsUrl)}, 5000)
       }
 
       this.ws.onerror = function (MessageEvent) {
-        _this.$message({type: 'error', message: 'WebSocket连接出错，5秒后自动重连', duration: 1000})
-        setTimeout(() => {_this.connectToChatRoom(wsUrl)}, 5000)
+        _this.$message({type: 'error', message: 'WebSocket连接出错，3秒后自动重连', duration: 1000})
+        setTimeout(() => {_this.connectToChatRoom(wsUrl)}, 3000)
       }
     },
     send() {

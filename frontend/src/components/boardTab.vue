@@ -8,7 +8,9 @@
       </div>
     </div>
     <div class="bulletinBoard" v-else>
-
+      <p>妙思猜绘目前处于早期开发测试阶段</p>
+      <p>如果您在游戏中遇到任何问题，发生包括但不限于 [数据删除] 和 [数据删除] 的现象，请不要惊慌，因为这是正常现象。</p>
+      <p>反馈邮箱: kromiose@163.com</p>
     </div>
     <p class="panelTitle" v-text="roomTitle"></p>
     <chatBoard ref="chatBoard" :syncFlag="syncFlag"  v-on:wsOnRecv="wsOnRecv"></chatBoard>
@@ -21,7 +23,7 @@ import chatBoard from '@/components/chatBoard.vue'
 export default {
   components: {chatBoard},
   props: {
-    wsUrl: String,
+    // wsUrl: String,
     boardTitle: String,
     roomTitle: String,
     syncFlag: Boolean,
@@ -37,8 +39,23 @@ export default {
       return this.$store.state.username
     },
   },
-  mounted() {
+  // mounted() {
+  //   if(this.ingameData && this.ingameData.userlist) {
 
+  //   } else {
+  //     if(this.$router.name === 'room') {
+  //       this.$router.push('/')
+  //     }
+  //   }
+  // },
+  updated() {
+    if(this.ingameData && this.ingameData.userlist) {
+
+    } else {
+      if(this.$router.name === 'room') {
+        this.$router.push('/')
+      }
+    }
   },
   methods: {
     submitPath(data) {
@@ -74,7 +91,7 @@ export default {
   }
 
   .bulletinBoard {
-    padding: 20px;
+    padding: 10px 20px;
     text-shadow: 2px 2px 12px #000c;
     color: #fff;
     flex: 0.2;
@@ -83,12 +100,18 @@ export default {
     box-shadow: #0003 4px 4px 16px;
     border-radius: 18px;
     overflow: hidden;
+    font-size: 12px;
+    text-indent: 24px;
+    width: 100%;
   }
 
   .userlistContainer {
+    text-indent: 0;
+
     .user {
       display: flex;
       flex-direction: row;
+      width: 100%;
       justify-content: space-between;
       align-items: center;
       margin: 4px 0;
@@ -105,9 +128,13 @@ export default {
         margin-bottom: 5px;
       }
       .score {
+        margin: 0;
         color: #fff;
+        height: 18px;
         text-shadow: 2px 2px 12px #000c;
-        margin-bottom: 5px;
+        width: 30px;
+        border-left: 1px solid #eee;
+        text-align: right;
       }
     }
     .u-got {

@@ -50,6 +50,7 @@ def get_room_list():
         'max_players_num': r.get('max_players_num'),
         'wsUrl': r.get('wsUrl'),
         'status':  r.get('status'),
+        'password': r.get('password'),
     } for r in rooms]}
 
 # 创建房间
@@ -89,7 +90,7 @@ def new_room():
                 'curWord': '',
                 'curDrawer': '',
                 'curDrawerIdx': 0,
-                'selection_duration': config.game_configs['selection_duration'] + 1,
+                'selection_duration': config.game_configs['selection_duration'] + 0.5,
                 'roundDuration': config.game_configs['draw_duration'],
                 'commentDuration': config.game_configs['comment_duration'],
                 'first_answer': True,
@@ -231,16 +232,6 @@ def draw_room():
                                 c['got_answer'] = False
                             ingameData['first_answer'] = True
 
-                            # 如果是最后一轮，直接结束游戏
-                            if ingameData['round'] >= config.game_configs['max_round']:
-                                ingameData['status'] = 'waiting'
-                                sendBoardcast({
-                                    'type': 'opt',
-                                    'showText': '等待中: 自由绘画时间',
-                                    'setStatus': 'waiting',
-                                })
-                                continue
-
                             # 推选下一位玩家
                             if curRoom['ingameData']['curDrawerIdx'] < len(curRoom['clients']) - 1:
                                 curRoom['ingameData']['curDrawerIdx'] += 1
@@ -249,18 +240,38 @@ def draw_room():
                                 ingameData['round'] += 1
                             curRoom['ingameData']['curDrawer'] = curRoom['clients'][curRoom['ingameData']['curDrawerIdx']]['username']
 
+                            # 如果是最后一轮，直接结束游戏
+                            if ingameData['round'] >= config.game_configs['max_round']:
+                                ingameData['round'] = 0
+                                ingameData['status'] = 'waiting'
+                                sendBoardcast({
+                                    'type': 'opt',
+                                    'showText': '等待中: 自由绘画时间',
+                                    'setStatus': 'waiting',
+                                })
+                                continue
+
                             # 发送选词指令
                             sendMsgTo(curRoom['ingameData']['curDrawer'], {
                                 'type': 'opt',
                                 'runMethod': 'run_selectWord',
-                                'showText': '请选词',
+                                'showText': '现在是你的回合，请选择一个词语开始绘画',
                                 'deadtimestamp': (time.time() + config.game_configs['selection_duration']) * 1000,
                             })
 
                             sendBoardcast({
                                 'type': 'opt',
                                 'showText': f"等待玩家 {curRoom['ingameData']['curDrawer']} 选词",
+                                'deadtimestamp': (time.time() + config.game_configs['selection_duration']) * 1000,
                             }, curRoom['ingameData']['curDrawer'])
+
+                        elif mdata['commend'] == 'exitRoom':    # 退出房间指令
+                            # 把发送者标为离线
+                            for c in curRoom['clients']:
+                                if c['username'] == mdata['sender']:
+                                    c['is_online'] = False
+                            sendBoardcast({})
+                            return {'code': 200, 'msg': '退出房间成功'}
 
                         elif mdata['commend'] == 'selectWord':  # 确定选词指令
                             curRoom['ingameData']['curWord'] = mdata['word']
@@ -301,9 +312,15 @@ def draw_room():
                                         need_resend_message = False
                                         break
 
+                                # 增加画手分数
+                                for c in curRoom['clients']:
+                                    if c['username'] == curRoom['ingameData']['curDrawer']:
+                                        c['score'] += 2
+                                        break
+
                             # 替换答案
-                            for a in curRoom['ingameData']['curWord']['word']:
-                                mdata['msg'] = mdata['msg'].replace(a, '*')
+                            for a in curRoom['ingameData']['curWord']['word'].uper() or a in curRoom['ingameData']['curWord']['word'].lower():
+                                mdata['msg'] = mdata['msg'].replace(a, '?')
                             
                             # 检测是否所有玩家都已经回答
                             all_got_answer = True
@@ -318,6 +335,16 @@ def draw_room():
                             sendBoardcast(mdata)
                         else:
                             sendBoardcast({'type': 'opt', 'runMethod': 'run_updateScore'})
+
+                    # 检测主持人是否在线
+                    for c in curRoom['clients']:
+                        if c['username'] == curRoom['hostname'] and c['is_online'] == False:
+                            sendBoardcast({
+                                'type': 'opt',
+                                'runMethod': 'run_hostOffline',
+                                'showText': '主持人已离线, 游戏结束',
+                            })
+
                 except Exception as e:
                     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 房间 {curRoom['roomId']} 广播消息出错: {e}")
                     continue
@@ -364,8 +391,8 @@ def recycle_thread():
                 rooms.remove(room)
                 break
 
-        # 每隔5秒检查一次
-        time.sleep(5)
+        # 每隔一段时间检查一次
+        time.sleep(3)
 
 # 以守护线程方式开启资源回收线程
 t = threading.Thread(target=recycle_thread, daemon=True)

@@ -110,7 +110,17 @@ def list_rooms():
                 if res['code'] == 'success':
                     curRooms = curRooms + res.get('data')
             last_updateTime = time.time()
-        return {'code': 'success', 'rooms': curRooms}
+        return {'code': 'success', 'rooms': [{
+            'id': room.get('id'),
+            'name': room.get('name'),
+            'locked': room.get('locked'),
+            'word_sources': room.get('word_sources'),
+            'hostname': room.get('hostname'),
+            'cur_players_num': room.get('cur_players_num'),
+            'max_players_num': room.get('max_players_num'),
+            'wsUrl': room.get('wsUrl'),
+            'status': room.get('status'),
+        } for room in curRooms]}
     return {'code': 'error'}
 
 # 创建房间 & 需登录
@@ -163,6 +173,8 @@ def join_room():
         print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 接收到来自 {session.get('username')} 的加入房间请求")
         for idx, room in enumerate(curRooms):
             if int(room['id']) == int(reqData.get('roomId')):
+                if room['locked'] and room['password'] != reqData.get('password'):
+                    return {'code': 'error', 'msg': '密码错误'}
                 if(int(room['cur_players_num']) < int(room['max_players_num'])):
                     room['cur_players_num'] += 1
                     return {'code': 'success', 'roomInfo': {
@@ -186,7 +198,7 @@ client_list = []
 def public_chat_room():
     client_socket = request.environ.get('wsgi.websocket')
     client_list.append(client_socket)
-    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 客户端 {client_socket} 已连接")
+    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 客户端 {session['username']} 已加入公共聊天室")
     try:
         while True:
             try:
@@ -201,6 +213,7 @@ def public_chat_room():
                     continue
     except Exception as e:
         client_list.remove(client_socket)
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 客户端 {session['username']} 已退出公共聊天室")
         return {'code': 'error'}
 
 

@@ -51,3 +51,24 @@ a {
 .el-slider__runway {
   background-color: #fff;
 }
+
+.el-select__tags-text {
+  background-color: #fff0;
+  text-shadow: none;
+}
+
+.el-tag {
+  border: #fdd 1px solid;
+  border-radius: 8px;
+  box-shadow: #888 1px 1px 8px;
+}
+
+.el-message-box {
+  background-color: #fffa;
+
+  .el-button {
+    border-radius: 18px;
+    margin: 0 10px;
+    box-shadow: #0003 4px 4px 16px;
+  }
+}

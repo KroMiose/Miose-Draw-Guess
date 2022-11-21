@@ -1,7 +1,7 @@
 <template>
   <div class="viewHeader">
     <div class="left">
-      <p v-text="panelTitle"></p>
+      <p v-text="panelTitle" @click="leave()"></p>
     </div>
     <div class="right">
       <span @click="logout()" class="userinfo">欢迎 {{getUsername}}</span>
@@ -34,16 +34,28 @@ export default {
       })    
     },
     logout() {
-      let _this = this
-      this.$http({
-        method: 'GET',
-        url: '/api/logout',
+      // let _this = this
+      // this.$http({
+      //   method: 'GET',
+      //   url: '/api/logout',
+      // })
+      //   .then(function() {
+      //     console.log('登出成功')
+      //     window.sessionStorage.removeItem('username')
+      //     _this.$router.push('/login')
+      //   })
+    },
+    leave() {
+      // 询问是否确认离开
+      this.$confirm('确认离开吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '点错了',
+        type: 'warning',
       })
-        .then(function() {
-          console.log('登出成功')
-          window.sessionStorage.removeItem('username')
-          _this.$router.push('/login')
+        .then(() => {
+          this.$emit('titleClick')
         })
+        .catch(() => {})
     }
   }
 }
