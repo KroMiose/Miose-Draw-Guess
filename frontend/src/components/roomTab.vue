@@ -18,7 +18,7 @@
               {{item.name}}<i v-show="item.locked != 'False'" class="el-icon-lock"></i>
             </p>
             <p class="room-desc">
-              {{item.description}}
+              {{item.word_sources}}
             </p>
           </div>
           <div class="side">
@@ -45,7 +45,13 @@
       </div>
       <div class="row">
         <span>房间描述:</span>
-        <el-input v-model="hostRoomInfo.description" placeholder="简单描述一下吧~"></el-input>
+        <el-select v-model="hostRoomInfo.word_sources" multiple placeholder="请选择词库源">
+          <el-option
+            v-for="item in word_sources" :key="item" :label="item" :value="item"
+          >
+          </el-option>
+        </el-select>
+        <!-- <el-input v-model="hostRoomInfo.description" placeholder="简单描述一下吧~"></el-input> -->
       </div>
       <div class="row">
         <span>访问密码:</span>
@@ -73,6 +79,10 @@ export default {
     this.hostRoomInfo.name = this.getUsername + ' 的房间'
     setTimeout(() => {this.loading = false}, 500)
     this.reloadRooms()
+    // 获取词库来源列表
+    this.$http.get('/api/get_word_source_list').then(res => {
+      this.word_sources = res.data.data
+    })
   },
   data() {
     return {
@@ -81,11 +91,13 @@ export default {
       playerNumLimit: [2, 10],
       hostRoomInfo: {
         name: '',
-        description: '',
+        // description: '',
         max_players_num: 8,
         password: '',
+        word_sources: ['基本'],
       },
       roomList: [],
+      word_sources: [],
     }
   },
   computed: {
@@ -104,6 +116,11 @@ export default {
     submitHostRoomInfo() {
       let _this = this
       _this.$message({type: 'info', message: '创建房间中', duration: 1000})
+
+      if(this.hostRoomInfo.word_sources.length == 0) {
+        this.$message({type: 'warning', message: '请选择至少一个词库源', duration: 1000})
+        return
+      }
 
       this.$http({
         method: 'POST',

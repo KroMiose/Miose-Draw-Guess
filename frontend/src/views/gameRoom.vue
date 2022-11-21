@@ -40,19 +40,23 @@
       <div class="msgBoarderBox">
         {{showText}}
         <div class="optBtn">
-          <el-button @click="req_startGame()">开始游戏</el-button>
+          <el-button type="success" size="mini" @click="req_startGame()" v-show="getUsername == ingameData.hostname && gamestatus == 'waiting'">开始游戏</el-button>
+          <el-button type="info" size="mini" @click="req_endRound(true)" v-show="getUsername == ingameData.curDrawer && gamestatus == 'drawing'">放弃绘图</el-button>
         </div>
       </div>
       <div :class="['wordSelectorBox', wordSelecting? 'wsb-show': 'wsb-hide']">
+        <div class="wordSelectorTitle">请选择一个词语</div>
         <div class="wordSelector">
-          <div class="wordSelectorTitle">请选择一个词语</div>
-          <div class="wordSelectorBody">
-            <div class="wordSelectorItem" v-for="item in wordList" :key="item.word" @click="req_selectWord(item)">
-              <div class="wordSelectorItemText" v-text="item.word"></div>
-            </div>
-          </div>
+          <div class="wordItem" v-for="item in wordList" :key="item.word" v-text="item.word" @click="req_selectWord(item)"></div>
         </div>
       </div>
+      <div class="timerBox">
+        <div class="timer" v-text="timerText || '∞'"></div>
+      </div>
+    </div>
+    <!-- 音效资源库 -->
+    <div class="audiosrc" style="display:none">
+      <audio id="got-answer" src="/audios/got_answer.mp3"></audio>
     </div>
   </div>
 </template>
@@ -69,12 +73,39 @@ export default {
     if(username) {
       this.$store.commit('setUsername', username)
     }
+    // 画板自适应
+    window.onresize=function(){  
+      document.getElementById('canvas').style.height = '500px'
+      document.getElementById('canvas').style.width = '500px'
+      // 节流
+      clearTimeout(this.resizeTimer)
+      this.resizeTimer = setTimeout(() => {
+        document.getElementById('canvas').style.height = document.getElementById('palette').scrollHeight + 'px'
+        document.getElementById('canvas').style.width = document.getElementById('palette').scrollHeight + 'px'
+      }, 300)
+    } 
     setTimeout(() => {
       document.getElementById('canvas').style.height = document.getElementById('palette').scrollHeight + 'px'
       this.loading = false
     }, 500)
 
     this.loadCanvas()
+
+    // 阶段倒计时定时器
+    if (this.timer) {
+      clearInterval(this.timer)
+    }
+    this.timer = setInterval(() => {
+      if(this.deadtimestamp) {
+        let now = new Date().getTime()
+        let diff = this.deadtimestamp - now
+        if(diff > 0) {
+          this.timerText = parseInt(diff / 1000) + 's'
+        } else {
+          this.timerText = ''
+        }
+      }
+    }, 1000)
   },
   data() {
     return {
@@ -103,13 +134,15 @@ export default {
         '#00ced1',
         '#1e90ff',
         '#b3a9ff',
-        // '#c71585',
       ],
       syncFlag: false,
-      showText: '等待中...',
+      showText: '等待中: 自由绘画时间',
+      gamestatus: 'waiting',
       wordSelecting: false,
       wordList: [],
       ingameData: {},
+      deadtimestamp: 0,
+      timerText: '',
     }
   },
   watch: {
@@ -123,6 +156,7 @@ export default {
     },
   },
   methods: {
+    
     // 请求开始游戏
     req_startGame() {
       this.sendWsMsg({type: 'opt', commend: 'startGame'})
@@ -132,20 +166,24 @@ export default {
       this.enableCanvasOpt = false  // 禁止画板操作
       this.$message({
         message: '游戏即将开始',
-        type: 'success'
+        type: 'success',
+        duration: 1000
       });
 
       setTimeout(() => {
-        if(this.ingameData.hostname == this.getUsername) {
+        if(this.getUsername == this.ingameData.hostname) {
           this.sendWsMsg({type: 'opt', commend: 'startRound'})
         }
-      }, 1000);
+      }, 1500);
     },
     // 执行选词流程
     run_selectWord() {
       this.$http({
-        method: 'get',
+        method: 'post',
         url: '/api/get_word',
+        data: {
+          source: this.ingameData.word_sources
+        }
       })
         .then(res => {
           this.wordList = res.data.data
@@ -154,11 +192,17 @@ export default {
             message: '现在是你的回合，请选择一个词语开始绘画',
             type: 'success'
           });
+          this.selectWordTimer = setTimeout(() => { // 超时选择随机词
+            this.req_selectWord(this.wordList[Math.floor(Math.random() * this.wordList.length)])
+          }, this.ingameData.selection_duration * 1000);
         })
     },
 
     // 提交选词
     req_selectWord(word) {
+      if(this.selectWordTimer) {
+        clearTimeout(this.selectWordTimer)
+      }
       this.wordSelecting = false
       this.sendWsMsg({type: 'opt', commend: 'selectWord', word: word})
     },
@@ -168,41 +212,59 @@ export default {
       this.resetCanvas()  // 重置画板
 
       // 主持人设置回合结束计时器
-      if(this.ingameData.hostname === this.getUsername) {
+      if(this.getUsername == this.ingameData.hostname) {
         this.roundTimer = setTimeout(() => {
           this.sendWsMsg({type: 'opt', commend: 'endRound'})
-        }, 60000);
+        }, this.ingameData.roundDuration * 1000);
       }
 
       if(this.ingameData.curDrawer === this.getUsername) {
         this.enableCanvasOpt = true
-        this.$message({
-          message: '现在是你的回合，请开始绘画',
-          type: 'success'
-        });
+        // this.$message({
+        //   message: '现在是你的回合，请开始绘画',
+        //   type: 'success'
+        // });
       } else {
-        this.$message({
-          message: '现在是' + this.ingameData.curDrawer + '的回合，请等待',
-          type: 'success'
-        });
+        // this.$message({
+        //   message: '现在是' + this.ingameData.curDrawer + '的回合，请等待',
+        //   type: 'success'
+        // });
       }
+    },
+
+    // 结束回合
+    req_endRound() {
+      this.sendWsMsg({type: 'opt', commend: 'endRound', is_give_up: true})
     },
 
     // 结束绘画
     run_endRound() {
       this.enableCanvasOpt = false
+      this.deadtimestamp = 0
+      if(this.roundTimer) {
+        clearTimeout(this.roundTimer)
+      }
       this.$message({
         message: '回合结束',
         type: 'success'
       });
-      if(this.ingameData.hostname == this.getUsername) {
+
+      if(this.getUsername == this.ingameData.hostname) {
         if(this.roundTimer) {
           clearTimeout(this.roundTimer)
         }
         setTimeout(() => {
           this.sendWsMsg({type: 'opt', commend: 'startRound'})
-        }, 10000);
+        }, this.ingameData.commentDuration * 1000);
       }
+    },
+
+    // 更新分数
+    run_updateScore() {
+      // 播放音效
+      let audio = document.getElementById('got-answer')
+      audio.volume = 0.5
+      audio.play()
     },
     
     // 接收到ws信息
@@ -233,19 +295,24 @@ export default {
           case 'run_selectWord': _this.run_selectWord(); break;
           case 'run_startRound': _this.run_startRound(); break;
           case 'run_endRound': _this.run_endRound(); break;
+          case 'run_updateScore': _this.run_updateScore(); break;
         
           default: break;
         }
-
-        if(data.showText) {
-          this.showText = data.showText
-        }
-        if(data.ingameData) {
-          this.ingameData = data.ingameData
-        }
+      }
+      if(data.showText) {
+        this.showText = data.showText
+      }
+      if(data.ingameData) {
+        this.ingameData = data.ingameData
+      }
+      if(data.deadtimestamp) {
+        this.deadtimestamp = data.deadtimestamp
+      }
+      if(data.setStatus) {
+        this.gamestatus = data.setStatus
       }
     },
-  
     // 发送消息
     sendWsMsg(data) {
       // data = {sender:this.getUsername, timestamp, type:'path'}
@@ -257,7 +324,7 @@ export default {
     // 绘画步骤完成触发
     drawStep(opt) {
       if(opt === true) return
-      console.log('更新画板')
+      // console.log('更新画板')
       let timestamp = (new Date()).valueOf();
       if(opt){
         this.imagePath.push({
@@ -483,6 +550,9 @@ export default {
       this.clearCanves(true)  // 清空画布
       this.drawHistory = []   // 清空历史记录
     },
+  },
+  beforeUnmount() {
+    clearInterval(this.timer)
   }
 }
 </script>
@@ -624,7 +694,7 @@ export default {
   align-items: center;
   
   #canvas {
-    transition: all 0.5s;
+    transition: all 0.2s;
     background-color: #fff;
     height: 300px;
     border: 2px solid rgba(255, 202, 96, 0.735);
@@ -644,9 +714,15 @@ export default {
   text-align: center;
   border-radius: 0 0 16px 16px;
   background-color: #fff;
-  color: #ffcfbb;
+  color: #e1ae99;
   font-size: 22px;
   border: 4px solid #FDB99B88;
+
+  .optBtn {
+    position: absolute;
+    top: -2px;
+    right: 0;
+  }
 }
 
 .wordSelectorBox {
@@ -656,7 +732,7 @@ export default {
   margin-left: -20vw;
   margin-top: -25vh;
   width: 40vw;
-  height: 30vh;
+  height: 20vh;
   border-radius: 16px;
   background-color: #fffa;
   color: #444;
@@ -665,31 +741,44 @@ export default {
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  padding: 10px 0;
+  padding: 10px 0 0;
   transition: all 0.3s;
   border: 1px solid #ffcfbb;
+  overflow: hidden;
   box-shadow: #0003 4px 4px 16px;
+
+  .wordSelectorTitle {
+    width: 100%;
+    text-align: center;
+    line-height: 20px;
+    font-size: 18px;
+    color: #444;
+    padding: 10px 0 10px;
+    border-bottom: 1px solid #ffcfbb;
+  }
 
   .wordSelector {
     flex: 1;
     width: 100%;
-    overflow: auto;
     padding: 0 10px;
     display: flex;
     flex-direction: row;
-    justify-content: flex-start;
-    align-items: flex-start;
+    justify-content: space-around;
+    align-items: center;
     flex-wrap: wrap;
+    background-color: #0001;
 
     .wordItem {
-      border: 1px solid #ffcfbb;
-      padding: 4px;
-      height: 30px;
       line-height: 30px;
       text-align: center;
       border-radius: 8px;
-      background-color: #fff8;
-      margin: 5px;
+      margin: 4px;
+      padding: 8px;
+      background-color: #fff;
+      color: #444;
+      font-size: 18px;
+      border: 1px solid #ffcfbb;
+      box-shadow: #0003 2px 2px 8px;
       cursor: pointer;
     }
   }
@@ -699,6 +788,25 @@ export default {
 }
 .wsb-show {
   top: 50%;
+}
+
+.timerBox {
+  position: fixed;
+  left: 150px;
+  top: 0;
+
+  .timer {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #fff;
+    color: #666;
+    font-size: 24px;
+    line-height: 44px;
+    text-align: center;
+    border: 3px solid #ffcfbb;
+    box-shadow: #0003 2px 2px 8px;
+  }
 }
 
 </style>

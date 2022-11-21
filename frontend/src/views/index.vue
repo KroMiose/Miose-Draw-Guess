@@ -48,7 +48,7 @@ export default {
   box-shadow: 2px 2px 8px #000a;
 
   .viewContainer {
-    width: 94vw;
+    width: 96vw;
     height: 92vh;
 
     border-radius: 28px 28px 0 0;
@@ -72,13 +72,13 @@ export default {
 
       .roomTab {
         height: 100%;
-        flex: 0.45;
+        flex: 0.55;
         border-right: 1px solid #eeea;
       }
       
       .boardTab {
         height: 100%;
-        flex: 0.55;
+        flex: 0.45;
       }
     }
   }

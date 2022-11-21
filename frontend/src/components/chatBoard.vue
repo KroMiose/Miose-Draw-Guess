@@ -64,8 +64,13 @@ export default {
         })
 
     } else if (this.$route.name === 'room') {
-      const roomInfo = this.$store.state.curRoom
-      this.connectToChatRoom(roomInfo.wsUrl)
+      try {
+        const roomInfo = this.$store.state.curRoom
+        this.connectToChatRoom(roomInfo.wsUrl)
+      } catch (err) {
+        // _this.$message({type: 'error', message: '获取WebSocket链接失败', duration: 2000})
+        _this.$router.push('/')
+      }
     }
   },
   beforeUnmount() {
@@ -73,6 +78,12 @@ export default {
       console.log('关闭原有ws连接')
       this.ws.close()
     }
+  },
+  beforeRouteLeave(to, from, next) {
+    if(this.ws) { // 关闭原有ws连接
+      this.ws.close()
+    }
+    next()
   },
   methods: {
     submitPath(data) {
@@ -116,12 +127,8 @@ export default {
           setTimeout(() => {
             _this.scrollDown()
           }, 50);
-        } else {
-          _this.$emit('wsOnRecv', data)
-          // if(data.type === 'path') {
-            // console.log('recived')
-          // }
         }
+        _this.$emit('wsOnRecv', data)
       }
 
       this.ws.onclose = function (e) {

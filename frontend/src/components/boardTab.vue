@@ -2,7 +2,7 @@
   <div class="boardTab">
     <p class="panelTitle" v-text="boardTitle"></p>
     <div class="userlistContainer bulletinBoard" v-if="ingameData && ingameData.userlist">
-      <div class="user" v-for="user in ingameData.userlist" :key="user.username">
+      <div v-for="user in ingameData.userlist" :class="['user', user.got_answer? 'u-got':'', ingameData.curDrawer == user.username? 'u-drawer':'']" :key="user.username">
         <div class="username" v-text="user.username"></div>
         <div class="score" v-text="user.score"></div>
       </div>
@@ -83,6 +83,39 @@ export default {
     box-shadow: #0003 4px 4px 16px;
     border-radius: 18px;
     overflow: hidden;
+  }
+
+  .userlistContainer {
+    .user {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      margin: 4px 0;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background-color: #fff3;
+      box-shadow: #0003 4px 4px 16px;
+      width: 100%;
+      height: 32px;
+
+      .username {
+        color: #fff;
+        text-shadow: 2px 2px 12px #000c;
+        margin-bottom: 5px;
+      }
+      .score {
+        color: #fff;
+        text-shadow: 2px 2px 12px #000c;
+        margin-bottom: 5px;
+      }
+    }
+    .u-got {
+      background-color: #3f33;
+    }
+    .u-drawer {
+      background-color: #ff33;
+    }
   }
 }
 </style>

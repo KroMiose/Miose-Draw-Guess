@@ -78,11 +78,17 @@ def logout():
     return {'code': 'success'}
 
 """ ================================ 游戏服务接口 ================================ """
-# 获取随机词语接口 & 需登录
-@app.route('/get_word', methods=['GET'])
+# 获取词语来源列表接口
+@app.route('/get_word_source_list', methods=['GET'])
+def get_word_source_list():
+    return {'code': 'success', 'data': do.get_word_source_list()}
+
+# 获取随机词语接口
+@app.route('/get_word', methods=['POST'])
 def get_word():
+    reqData = json.loads(request.data.decode('UTF-8'))
     if 'userid' in session and session['userid']:
-        words = do.get_random_word(config.game_configs['word_pool_size'])
+        words = do.get_random_word(config.game_configs['word_pool_size'], reqData)
         return {'code': 'success', 'msg': '获取成功', 'data': words}
     return {'code': 'error', 'msg': '请先登录'}
 
@@ -125,7 +131,7 @@ def creat_room():
             'roomId': roomId,                           # 房间id
             'hostname': session['username'],            # 主持人用户名
             'name': reqData['hostRoomInfo']['name'],                    # 房间名
-            'description': reqData['hostRoomInfo']['description'],      # 房间描述
+            'word_sources': '|'.join(reqData['hostRoomInfo']['word_sources']),      # 房间词库
             'max_players_num': reqData['hostRoomInfo']['max_players_num'],      # 房间最大人数
             'password': reqData['hostRoomInfo']['password'],                    # 访问密码
             'locked':( True if reqData['hostRoomInfo']['password'] else False),   # 锁定状态
@@ -139,7 +145,7 @@ def creat_room():
                     'roomId': roomId,                           # 房间id
                     'hostname': session['username'],            # 主持人用户名
                     'name': reqData['hostRoomInfo']['name'],                    # 房间名
-                    'description': reqData['hostRoomInfo']['description'],      # 房间描述
+                    'word_sources': reqData['hostRoomInfo']['word_sources'],      # 房间词库
                     'max_players_num': reqData['hostRoomInfo']['max_players_num'],      # 房间最大人数
                     'password': reqData['hostRoomInfo']['password'],                    # 访问密码
                     'locked':( True if reqData['hostRoomInfo']['password'] else False),   # 锁定状态
@@ -163,7 +169,7 @@ def join_room():
                         'roomId': room['id'],           # 房间id
                         'hostname': room['hostname'],   # 主持人用户名
                         'name': room['name'],                # 房间名
-                        'description': room['description'],  # 房间描述
+                        'word_sources': room['word_sources'],  # 房间描述
                         'max_players_num': room['max_players_num'], # 房间最大人数
                         'wsUrl': room['wsUrl'],         # 房间ws链接
                     }}

@@ -14,10 +14,28 @@ class dataOpt:
     def __init__(self):
         self.db = DatabaseManager(config=config.database_settings)
 
+    # 获取词汇来源列表
+    def get_word_source_list(self):
+        try:
+            res = self.db.select(f'''SELECT DISTINCT `source` FROM `words`;''')
+            return [s['source'] for s in res]
+        except Exception as e:
+            return []
+
     # 获取随机词汇
-    def get_random_word(self, num):
-        res = self.db.select(f'''SELECT * FROM `words` ORDER BY RAND() LIMIT {num};''')
-        return res
+    def get_random_word(self, num, reqData):
+        try:
+            sourceList = reqData.get('source')
+            # 从数据库中抽取分类中的词汇
+            if sourceList:
+                sourceList = [f"'{i}'" for i in sourceList]
+                sourceList = ','.join(sourceList)
+                res = self.db.select(f"SELECT * FROM `words` WHERE `source` IN ({sourceList}) ORDER BY RAND() LIMIT {num}")
+            else:
+                res = self.db.select(f'''SELECT * FROM `words` ORDER BY RAND() LIMIT {num};''')
+            return res
+        except Exception as e:
+            return []
 
     # 检测输入字符串是否合法
     @staticmethod
