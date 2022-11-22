@@ -280,7 +280,7 @@ def draw_room():
                             sendMsgTo(curRoom['ingameData']['curDrawer'], {
                                 'type': 'opt',
                                 'runMethod': 'run_startRound',
-                                'showText': '题目: ' + curRoom['ingameData']['curWord']['word'],
+                                'showText': '题目: ' + curRoom['ingameData']['curWord']['word'].split('|')[0],
                                 'setStatus': 'drawing',
                                 'deadtimestamp': (time.time() + config.game_configs['draw_duration']) * 1000,
                             })
