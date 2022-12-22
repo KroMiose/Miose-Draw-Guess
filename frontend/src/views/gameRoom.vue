@@ -492,6 +492,46 @@ export default {
           _this.drawStep()
         }
       };
+      // // 手写笔设备
+      // // 手写笔开始事件（onpointerdown）
+      // _this.canvas.onpointerdown = function (e) {
+      //   if(_this.enableCanvasOpt) {
+      //     let pos = _this.canvas.getBoundingClientRect()
+      //     let x = e.clientX-pos.left;
+      //     let y = e.clientY-pos.top;
+      //     _this.painting = true;
+      //     if (_this.eraserEnabled) {
+      //       _this.erase(x, y)
+      //     }
+      //     _this.startPoint = {x: x, y: y};
+      //   }
+      // };
+      // // 手写笔滑动事件（onpointermove）
+      // _this.canvas.onpointermove = function (e) {
+      //   if(_this.enableCanvasOpt) {
+      //     let pos = _this.canvas.getBoundingClientRect()
+      //     let x = e.clientX-pos.left;
+      //     let y = e.clientY-pos.top;
+      //     let newPoint = {x: x, y: y};
+      //     if (_this.painting) {
+      //       if (_this.eraserEnabled) {
+      //         _this.erase(x, y)
+      //       } else {
+      //         _this.drawLine(_this.startPoint.x, _this.startPoint.y, newPoint.x, newPoint.y);
+      //       }
+      //       _this.startPoint = newPoint;
+      //     }
+      //   }
+      // };
+      // // 手写笔结束事件（onpointerup）
+      // _this.canvas.onpointerup = function () {
+      //   if(_this.enableCanvasOpt) {
+      //     _this.painting = false;
+      //     let image = _this.ctx.getImageData(0, 0, _this.canvasSize, _this.canvasSize);
+      //     _this.drawHistory.push(image);
+      //     _this.drawStep()
+      //   }
+      // };
     },
     // 设置画笔颜色
     setColor(color) {

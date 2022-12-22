@@ -1,5 +1,6 @@
 /backend/config.py
 /backend/__pycache__
+/backend/sql
 
 /frontend/.DS_Store
 /frontend/node_modules

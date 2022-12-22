@@ -124,7 +124,7 @@ def draw_room():
                     if roomId := mdata.get('roomId'):
                         print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 用户 {mdata['sender']} 请求加入房间: {roomId}")
                         for idx, room in enumerate(rooms):
-                            if str(room['roomId']) == str(room['roomId']):
+                            if str(room['roomId']) == str(roomId):
                                 curRoom = rooms[idx] # 获取到指定房间
                                 # 检测用户是否在房间中
                                 if mdata['sender'] not in [c['username'] for c in curRoom['clients']]:
@@ -319,7 +319,7 @@ def draw_room():
                                         break
 
                             # 替换答案
-                            for a in curRoom['ingameData']['curWord']['word'].uper() or a in curRoom['ingameData']['curWord']['word'].lower():
+                            for a in curRoom['ingameData']['curWord']['word'].upper() or a in curRoom['ingameData']['curWord']['word'].lower():
                                 mdata['msg'] = mdata['msg'].replace(a, '?')
                             
                             # 检测是否所有玩家都已经回答
