@@ -1,5 +1,5 @@
 # Miose - Draw & Guess 项目文档
-> 线上运行地址: http://dg.kromiose.top/ (仅支持pc端或pad端)
+> 线上运行地址: http://dg.miose.cn/ (仅支持pc端或pad端)
 
 ## 特殊环境要求
 
@@ -69,3 +69,8 @@
 - 基本架构设计 - 已完成
 - 游戏房间进程控制系统 - 已完成
 - 房间资源回收系统 - 已完成
+
+## 游戏演示
+
+![image](https://github.com/KroMiose/Miose-Draw-Guess/assets/57167362/77fb75c7-8ddf-477a-9b4e-6dd712fc695f)
+![image](https://github.com/KroMiose/Miose-Draw-Guess/assets/57167362/bf5809b4-12a7-46d1-bd91-147554e49908)
